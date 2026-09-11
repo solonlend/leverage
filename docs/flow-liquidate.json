@@ -1,0 +1,51 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "liquidate() 内部流程与分支",
+    "output": "flow-liquidate.html",
+    "quality_profile": "standard",
+    "subtitle": "清算:守卫 → 扣押计算 → 结算(含 F2 超额回冲与坏账分支)"
+  },
+  "lanes": [
+    { "id": "main", "label": "主流程" },
+    { "id": "calc", "label": "守卫 / 计算" },
+    { "id": "exc", "label": "revert 分支", "variant": "exception" }
+  ],
+  "phases": [
+    { "id": "guard", "label": "守卫校验", "fromCol": 0, "toCol": 2 },
+    { "id": "size", "label": "扣押计算", "fromCol": 3, "toCol": 3, "variant": "emphasis" },
+    { "id": "settle", "label": "资金结算", "fromCol": 4, "toCol": 5, "variant": "dashed" }
+  ],
+  "mainPath": ["entry", "gKeeper", "gHealth", "seize", "settleCore", "payout"],
+  "nodes": [
+    { "id": "entry", "lane": "main", "col": 0, "type": "external", "label": "liquidate()", "sublabel": "keeper 调用", "width": 150 },
+    { "id": "gKeeper", "lane": "calc", "col": 1, "type": "security", "label": "白名单?", "sublabel": "liquidators[caller]", "width": 160 },
+    { "id": "gHealth", "lane": "calc", "col": 2, "type": "security", "label": "已不健康?", "sublabel": "价×LLTV<债务", "width": 160 },
+    { "id": "seize", "lane": "calc", "col": 3, "type": "backend", "label": "算扣押量", "sublabel": "repay≤债50%·按 posVal 比例扣", "width": 180, "tag": "扣押分支" },
+    { "id": "settleCore", "lane": "main", "col": 4, "type": "backend", "label": "扣仓·还债·撤LP", "sublabel": "全平burn·垫付repay·撤LP换USDG", "width": 190 },
+    { "id": "payout", "lane": "main", "col": 5, "type": "backend", "label": "分账·记账", "sublabel": "抽10%·封顶应得(F2)·超额回冲", "width": 190 },
+
+    { "id": "revNotLiq", "lane": "exc", "col": 1, "type": "external", "label": "revert", "sublabel": "NotLiquidator", "width": 150 },
+    { "id": "revHealthy", "lane": "exc", "col": 2, "type": "external", "label": "revert", "sublabel": "Healthy", "width": 150 },
+    { "id": "revZero", "lane": "exc", "col": 3, "type": "external", "label": "revert", "sublabel": "ZERO_REPAY / SEIZE", "width": 180 },
+    { "id": "revSlip", "lane": "exc", "col": 5, "type": "external", "label": "revert", "sublabel": "SLIPPAGE", "width": 150 }
+  ],
+  "edges": [
+    { "id": "e1", "from": "entry", "to": "gKeeper", "label": "校验调用者", "variant": "emphasis" },
+    { "id": "e2", "from": "gKeeper", "to": "gHealth", "label": "是", "variant": "emphasis" },
+    { "id": "e3", "from": "gHealth", "to": "seize", "label": "是", "variant": "emphasis" },
+    { "id": "e4", "from": "seize", "to": "settleCore", "label": "扣押>0", "variant": "emphasis" },
+    { "id": "e5", "from": "settleCore", "to": "payout", "variant": "emphasis" },
+
+    { "id": "x1", "from": "gKeeper", "to": "revNotLiq", "label": "否", "variant": "security", "role": "error" },
+    { "id": "x2", "from": "gHealth", "to": "revHealthy", "label": "健康", "variant": "security", "role": "error" },
+    { "id": "x3", "from": "seize", "to": "revZero", "label": "=0", "variant": "security", "role": "error" },
+    { "id": "x4", "from": "payout", "to": "revSlip", "label": "不足", "variant": "security", "role": "error" }
+  ],
+  "cards": [
+    { "dot": "rose", "title": "守卫(任一不过即 revert)", "items": ["调用者必须在清算白名单", "仓位必须真不健康(公允价×LLTV<债务)", "repay 封顶债务的 50%(closeFactor)", "扣押量取整不能为 0"] },
+    { "dot": "amber", "title": "扣押计算", "items": ["seizeValue = repay×(1+8% bonus)", "seizeValue ≥ 仓位价值 → 扣全部;否则按比例", "posVal 用抗操纵公允价,防低估超扣"] },
+    { "dot": "emerald", "title": "结算(F2 修复要点)", "items": ["keeper 净得封顶应得 bonus,不按实际卖出所得", "超出应得部分先多还借款人债务、再退还本人", "全平后残债>0 → emit BadDebt 供监控"] }
+  ]
+}

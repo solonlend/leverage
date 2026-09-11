@@ -1,0 +1,416 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Solon Farm · Auto LP + Portfolio — user flow & data plane (v1, 2026-09-10)",
+    "animation": "none",
+    "visual_preset": "signal-flow",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "deposit-journey",
+        "label": "Deposit journey",
+        "focus": [
+          "nav_farm",
+          "vault_list",
+          "vault_detail",
+          "action_sheet",
+          "calm_gate",
+          "onchain_tx",
+          "my_position"
+        ],
+        "note": "The full path from the Farm tab to a settled position: list → slug-routed detail → right-hand sheet → calm gate → transactions."
+      },
+      {
+        "id": "gates-failures",
+        "label": "Gates & failure paths",
+        "focus": [
+          "vault_detail",
+          "connect_modal",
+          "action_sheet",
+          "calm_gate",
+          "onchain_tx"
+        ],
+        "note": "Non-happy paths: no wallet → connect modal → back to detail (re-click), volatile blocks deposits only, reverted tx returns to the sheet."
+      },
+      {
+        "id": "data-plane",
+        "label": "Data plane",
+        "focus": [
+          "chain_reads",
+          "json_feeds",
+          "vault_events",
+          "vault_list",
+          "portfolio"
+        ],
+        "note": "Where every number on screen comes from: 30s contract reads, cron-published JSON feeds, and event replay for PnL."
+      },
+      {
+        "id": "account-view",
+        "label": "Portfolio & points",
+        "focus": [
+          "portfolio",
+          "my_position",
+          "json_feeds"
+        ],
+        "note": "The top-level account page: Auto totals, per-vault rows, leveraged table, and the merged Points section."
+      }
+    ],
+    "output": "FLOW-farm-auto-v1.html"
+  },
+  "lanes": [
+    {
+      "id": "nav",
+      "label": "Navigation"
+    },
+    {
+      "id": "auto",
+      "label": "Auto LP Pages"
+    },
+    {
+      "id": "action",
+      "label": "Action Sheet & Transactions"
+    },
+    {
+      "id": "account",
+      "label": "Account View"
+    },
+    {
+      "id": "data",
+      "label": "Data Plane",
+      "variant": "exception"
+    }
+  ],
+  "phases": [
+    {
+      "id": "discover",
+      "label": "Discover",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "act",
+      "label": "Inspect + transact",
+      "fromCol": 2,
+      "toCol": 4,
+      "variant": "emphasis"
+    },
+    {
+      "id": "track",
+      "label": "Track",
+      "fromCol": 5,
+      "toCol": 5,
+      "variant": "dashed"
+    }
+  ],
+  "groups": [
+    {
+      "id": "two_layer",
+      "label": "Two-layer IA",
+      "lane": "auto",
+      "fromCol": 1,
+      "toCol": 2,
+      "variant": "emphasis"
+    },
+    {
+      "id": "gate",
+      "label": "Withdrawals never gated",
+      "lane": "action",
+      "fromCol": 3,
+      "toCol": 4,
+      "variant": "security"
+    },
+    {
+      "id": "feeds",
+      "label": "Cron JSON feeds",
+      "lane": "data",
+      "fromCol": 1,
+      "toCol": 3,
+      "variant": "dashed"
+    }
+  ],
+  "mainPath": [
+    "nav_farm",
+    "vault_list",
+    "vault_detail",
+    "action_sheet",
+    "calm_gate",
+    "onchain_tx",
+    "my_position",
+    "portfolio"
+  ],
+  "nodes": [
+    {
+      "id": "nav_farm",
+      "lane": "nav",
+      "col": 0,
+      "type": "frontend",
+      "label": "Top Nav",
+      "sublabel": "Farm · Portfolio",
+      "width": 132
+    },
+    {
+      "id": "vault_list",
+      "lane": "auto",
+      "col": 1,
+      "type": "frontend",
+      "label": "Vault List",
+      "sublabel": "/farm/auto",
+      "width": 132
+    },
+    {
+      "id": "vault_detail",
+      "lane": "auto",
+      "col": 2,
+      "type": "frontend",
+      "label": "Vault Detail",
+      "sublabel": "/farm/auto/:slug",
+      "width": 132
+    },
+    {
+      "id": "connect_modal",
+      "lane": "action",
+      "col": 2,
+      "type": "external",
+      "label": "Connect Wallet",
+      "sublabel": "connectkit modal",
+      "width": 132
+    },
+    {
+      "id": "coming_soon",
+      "lane": "auto",
+      "col": 3,
+      "type": "external",
+      "label": "Coming Soon",
+      "sublabel": "pool stats+fees",
+      "width": 132
+    },
+    {
+      "id": "action_sheet",
+      "lane": "action",
+      "col": 3,
+      "type": "backend",
+      "label": "Action Sheet",
+      "sublabel": "deposit% / withdraw%",
+      "width": 132
+    },
+    {
+      "id": "calm_gate",
+      "lane": "action",
+      "col": 4,
+      "type": "security",
+      "label": "Calm Gate",
+      "sublabel": "2-min TWAP check",
+      "tag": "deposit only",
+      "width": 132
+    },
+    {
+      "id": "onchain_tx",
+      "lane": "action",
+      "col": 5,
+      "type": "cloud",
+      "label": "On-chain Tx",
+      "sublabel": "approve + tx",
+      "width": 132
+    },
+    {
+      "id": "my_position",
+      "lane": "auto",
+      "col": 5,
+      "type": "database",
+      "label": "My Position",
+      "sublabel": "value · cost · yield · HODL",
+      "width": 140
+    },
+    {
+      "id": "portfolio",
+      "lane": "account",
+      "col": 5,
+      "type": "backend",
+      "label": "Portfolio",
+      "sublabel": "top-nav /portfolio+Points",
+      "width": 150
+    },
+    {
+      "id": "chain_reads",
+      "lane": "data",
+      "col": 1,
+      "type": "cloud",
+      "label": "Contract Reads",
+      "sublabel": "vault+strategy 30s",
+      "width": 132
+    },
+    {
+      "id": "json_feeds",
+      "lane": "data",
+      "col": 2,
+      "type": "database",
+      "label": "JSON Feeds",
+      "sublabel": "pools·positions·apr",
+      "width": 132
+    },
+    {
+      "id": "vault_events",
+      "lane": "data",
+      "col": 3,
+      "type": "messagebus",
+      "label": "Vault Events",
+      "sublabel": "event replay",
+      "width": 132
+    }
+  ],
+  "edges": [
+    {
+      "id": "nav-to-list",
+      "from": "nav_farm",
+      "to": "vault_list",
+      "label": "Auto tab",
+      "variant": "emphasis"
+    },
+    {
+      "id": "list-to-detail",
+      "from": "vault_list",
+      "to": "vault_detail",
+      "label": "row click",
+      "variant": "emphasis"
+    },
+    {
+      "id": "detail-to-sheet",
+      "from": "vault_detail",
+      "to": "action_sheet",
+      "label": "Deposit / Withdraw",
+      "variant": "emphasis"
+    },
+    {
+      "id": "detail-to-coming",
+      "from": "vault_detail",
+      "to": "coming_soon",
+      "label": "undeployed",
+      "variant": "dashed",
+      "role": "branch"
+    },
+    {
+      "id": "detail-to-connect",
+      "from": "vault_detail",
+      "to": "connect_modal",
+      "label": "no wallet",
+      "variant": "dashed",
+      "role": "branch"
+    },
+    {
+      "id": "connect-to-detail",
+      "from": "connect_modal",
+      "to": "vault_detail",
+      "label": "connected · re-click",
+      "variant": "dashed"
+    },
+    {
+      "id": "gate-blocked",
+      "from": "calm_gate",
+      "to": "action_sheet",
+      "label": "volatile: blocked",
+      "variant": "security",
+      "role": "return"
+    },
+    {
+      "id": "tx-fail",
+      "from": "onchain_tx",
+      "to": "action_sheet",
+      "label": "revert / cancel",
+      "variant": "dashed",
+      "role": "error",
+      "fromSide": "bottom",
+      "toSide": "bottom",
+      "channelY": 475
+    },
+    {
+      "id": "sheet-withdraw",
+      "from": "action_sheet",
+      "to": "onchain_tx",
+      "label": "withdraw · no calm gate",
+      "variant": "default",
+      "role": "branch"
+    },
+    {
+      "id": "sheet-to-gate",
+      "from": "action_sheet",
+      "to": "calm_gate",
+      "label": "deposit",
+      "variant": "security"
+    },
+    {
+      "id": "gate-to-tx",
+      "from": "calm_gate",
+      "to": "onchain_tx",
+      "label": "calm",
+      "variant": "emphasis"
+    },
+    {
+      "id": "tx-to-position",
+      "from": "onchain_tx",
+      "to": "my_position",
+      "label": "refetch",
+      "variant": "default"
+    },
+    {
+      "id": "position-to-portfolio",
+      "from": "my_position",
+      "to": "portfolio",
+      "label": "aggregated",
+      "variant": "default"
+    },
+    {
+      "id": "reads-to-list",
+      "from": "chain_reads",
+      "to": "vault_list",
+      "label": "live state",
+      "variant": "dashed"
+    },
+    {
+      "id": "feeds-to-detail",
+      "from": "json_feeds",
+      "to": "vault_detail",
+      "label": "pre-launch + basis",
+      "variant": "dashed"
+    },
+    {
+      "id": "events-to-portfolio",
+      "from": "vault_events",
+      "to": "portfolio",
+      "label": "PnL & cost basis",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Functional completeness (2026-09-10)",
+      "items": [
+        "Two-layer IA: list directory + slug detail, legacy routes redirect",
+        "Actions: % fills in vault ratio, calm-gated deposits, ungated withdrawals",
+        "Position: value, entry-priced cost basis, yield, vs-HODL, share, shares",
+        "Portfolio top-level: Auto totals + leveraged table + Points merged"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Known gaps ①–⑭ (tracked, not built)",
+      "items": [
+        "USD quote source + trading-hours copy before NVDA/SPY deploy",
+        "Leverage cost basis → totals · risk area remainder (Borrow + Auto dims)",
+        "Price chart · audit safety section · compliance slot · single-coin zap",
+        "v1.5 pending: deposit shortfall hint, calm/out-of-range copy unification",
+        "Vault history (new indexer) · notifications · APR window · post-tx sync lag"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Process contract",
+      "items": [
+        "Every functional change lands on this diagram + the design doc first",
+        "Walkthrough = walk this graph edge by edge, screenshots at each node",
+        "Cron feeds go live with the mainnet deploy (indexer family)"
+      ]
+    }
+  ]
+}

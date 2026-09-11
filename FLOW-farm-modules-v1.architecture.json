@@ -1,0 +1,725 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Solon Farm · Auto LP + Portfolio — module map: contents & upstream/downstream (v1, 2026-09-10)",
+    "output": "FLOW-farm-modules-v1.html",
+    "quality_profile": "standard",
+    "views": [
+      {
+        "id": "list-module",
+        "label": "Vault List module",
+        "focus": [
+          "rpc",
+          "hook_vault",
+          "hook_pools",
+          "listrow",
+          "listextras",
+          "statshead"
+        ],
+        "note": "What the directory row shows and where each column's number comes from."
+      },
+      {
+        "id": "detail-module",
+        "label": "Vault Detail module",
+        "focus": [
+          "hook_vault",
+          "hook_basis",
+          "hook_events",
+          "statshead",
+          "range",
+          "lpbreak",
+          "mypos",
+          "fees",
+          "vaultinfo",
+          "sheet_dep",
+          "sheet_wd"
+        ],
+        "note": "Every information block on the detail page and the action sheet it opens."
+      },
+      {
+        "id": "data-pipeline",
+        "label": "Data pipeline",
+        "focus": [
+          "gateway",
+          "archive",
+          "rpc",
+          "py_pools",
+          "py_positions",
+          "py_feeapr",
+          "json_pools",
+          "json_positions",
+          "json_feeapr"
+        ],
+        "note": "External sources → cron scripts → published JSON → frontend hooks."
+      },
+      {
+        "id": "portfolio-module",
+        "label": "Portfolio module",
+        "focus": [
+          "mypos",
+          "pf_overview",
+          "pf_rows",
+          "pf_lev",
+          "pf_points"
+        ],
+        "note": "The account page's four sections and their upstreams."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "gateway",
+      "type": "external",
+      "label": "Uniswap Gateway",
+      "sublabel": "TVL·volume",
+      "pos": [
+        40,
+        90
+      ],
+      "size": [
+        150,
+        56
+      ]
+    },
+    {
+      "id": "archive",
+      "type": "external",
+      "label": "Archive RPC",
+      "sublabel": "price@block",
+      "pos": [
+        40,
+        190
+      ],
+      "size": [
+        150,
+        56
+      ]
+    },
+    {
+      "id": "rpc",
+      "type": "cloud",
+      "label": "Chain RPC",
+      "sublabel": "reads·logs·tx",
+      "pos": [
+        40,
+        290
+      ],
+      "size": [
+        150,
+        56
+      ]
+    },
+    {
+      "id": "py_pools",
+      "type": "backend",
+      "label": "auto_pools.py",
+      "sublabel": "APR ×lpShare",
+      "pos": [
+        260,
+        90
+      ],
+      "size": [
+        150,
+        56
+      ],
+      "tag": "cron"
+    },
+    {
+      "id": "py_positions",
+      "type": "backend",
+      "label": "auto_positions.py",
+      "sublabel": "cost basis",
+      "pos": [
+        260,
+        190
+      ],
+      "size": [
+        150,
+        56
+      ],
+      "tag": "cron"
+    },
+    {
+      "id": "py_feeapr",
+      "type": "backend",
+      "label": "farm_fee_apr.py",
+      "sublabel": "feeGrowth window",
+      "pos": [
+        260,
+        290
+      ],
+      "size": [
+        150,
+        56
+      ],
+      "tag": "cron"
+    },
+    {
+      "id": "json_pools",
+      "type": "database",
+      "label": "auto-pools.json",
+      "sublabel": "pool TVL·APR",
+      "pos": [
+        480,
+        90
+      ],
+      "size": [
+        150,
+        56
+      ]
+    },
+    {
+      "id": "json_positions",
+      "type": "database",
+      "label": "auto-positions.json",
+      "sublabel": "per-user basis",
+      "pos": [
+        480,
+        190
+      ],
+      "size": [
+        150,
+        56
+      ]
+    },
+    {
+      "id": "json_feeapr",
+      "type": "database",
+      "label": "farm-fee-apr.json",
+      "sublabel": "gross fee APR",
+      "pos": [
+        480,
+        290
+      ],
+      "size": [
+        150,
+        56
+      ]
+    },
+    {
+      "id": "hook_pools",
+      "type": "frontend",
+      "label": "usePoolStats",
+      "sublabel": "pre-launch rows",
+      "pos": [
+        700,
+        60
+      ],
+      "size": [
+        150,
+        56
+      ]
+    },
+    {
+      "id": "hook_basis",
+      "type": "frontend",
+      "label": "usePositionBasis",
+      "sublabel": "At deposit",
+      "pos": [
+        700,
+        330
+      ],
+      "size": [
+        150,
+        56
+      ]
+    },
+    {
+      "id": "hook_apr",
+      "type": "frontend",
+      "label": "useLiveFeeApr",
+      "sublabel": "pool-keyed",
+      "pos": [
+        700,
+        240
+      ],
+      "size": [
+        150,
+        56
+      ]
+    },
+    {
+      "id": "hook_vault",
+      "type": "frontend",
+      "label": "useAutoVault",
+      "sublabel": "30s state",
+      "pos": [
+        700,
+        150
+      ],
+      "size": [
+        150,
+        56
+      ],
+      "tag": "single source"
+    },
+    {
+      "id": "hook_events",
+      "type": "frontend",
+      "label": "useNetContribution",
+      "sublabel": "event replay",
+      "pos": [
+        700,
+        430
+      ],
+      "size": [
+        150,
+        56
+      ]
+    },
+    {
+      "id": "listrow",
+      "type": "frontend",
+      "label": "List Row",
+      "sublabel": "pair·APR·Daily·TVL·mine",
+      "pos": [
+        950,
+        60
+      ],
+      "size": [
+        170,
+        56
+      ]
+    },
+    {
+      "id": "listextras",
+      "type": "frontend",
+      "label": "List Extras",
+      "sublabel": "sort·filter≥7·hover",
+      "pos": [
+        1180,
+        60
+      ],
+      "size": [
+        170,
+        56
+      ]
+    },
+    {
+      "id": "statshead",
+      "type": "frontend",
+      "label": "Stats Header",
+      "sublabel": "APR·Daily·TVL·mine",
+      "pos": [
+        950,
+        150
+      ],
+      "size": [
+        170,
+        56
+      ]
+    },
+    {
+      "id": "range",
+      "type": "frontend",
+      "label": "Range Visual",
+      "sublabel": "min·cur·max·CALM",
+      "pos": [
+        1180,
+        150
+      ],
+      "size": [
+        170,
+        56
+      ]
+    },
+    {
+      "id": "lpbreak",
+      "type": "frontend",
+      "label": "LP Breakdown",
+      "sublabel": "amounts·share bars",
+      "pos": [
+        1180,
+        240
+      ],
+      "size": [
+        170,
+        56
+      ]
+    },
+    {
+      "id": "mypos",
+      "type": "frontend",
+      "label": "My Position",
+      "sublabel": "val·cost·yield·HODL",
+      "pos": [
+        950,
+        330
+      ],
+      "size": [
+        170,
+        56
+      ]
+    },
+    {
+      "id": "fees",
+      "type": "frontend",
+      "label": "Fees Panel",
+      "sublabel": "0 · 0 · 10% yield",
+      "pos": [
+        950,
+        240
+      ],
+      "size": [
+        170,
+        56
+      ]
+    },
+    {
+      "id": "vaultinfo",
+      "type": "frontend",
+      "label": "Vault Details",
+      "sublabel": "contracts·last adjust",
+      "pos": [
+        1180,
+        330
+      ],
+      "size": [
+        170,
+        56
+      ]
+    },
+    {
+      "id": "sheet_dep",
+      "type": "backend",
+      "label": "Deposit Sheet",
+      "sublabel": "%fill·preview·fees",
+      "pos": [
+        950,
+        470
+      ],
+      "size": [
+        170,
+        56
+      ],
+      "tag": "calm-gated"
+    },
+    {
+      "id": "sheet_wd",
+      "type": "backend",
+      "label": "Withdraw Sheet",
+      "sublabel": "25-100%·preview",
+      "pos": [
+        1180,
+        470
+      ],
+      "size": [
+        170,
+        56
+      ],
+      "tag": "never gated"
+    },
+    {
+      "id": "pf_overview",
+      "type": "frontend",
+      "label": "Overview Totals",
+      "sublabel": "value·cost·yield·HODL",
+      "pos": [
+        950,
+        620
+      ],
+      "size": [
+        170,
+        56
+      ]
+    },
+    {
+      "id": "pf_rows",
+      "type": "frontend",
+      "label": "Auto Rows",
+      "sublabel": "per-vault → detail",
+      "pos": [
+        1180,
+        620
+      ],
+      "size": [
+        170,
+        56
+      ]
+    },
+    {
+      "id": "pf_lev",
+      "type": "frontend",
+      "label": "Leveraged Table",
+      "sublabel": "value·debt·health",
+      "pos": [
+        950,
+        710
+      ],
+      "size": [
+        170,
+        56
+      ]
+    },
+    {
+      "id": "pf_points",
+      "type": "frontend",
+      "label": "Points Section",
+      "sublabel": "my points·leaderboard",
+      "pos": [
+        1180,
+        710
+      ],
+      "size": [
+        170,
+        56
+      ]
+    },
+    {
+      "id": "pf_risk",
+      "type": "security",
+      "label": "Risk Summary",
+      "sublabel": "usage-sorted·liq first",
+      "pos": [
+        950,
+        550
+      ],
+      "size": [
+        170,
+        56
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Cron indexer family (server)",
+      "wraps": [
+        "py_pools",
+        "py_positions",
+        "py_feeapr"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Published JSON (web root data/)",
+      "wraps": [
+        "json_pools",
+        "json_positions",
+        "json_feeapr"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Frontend hooks",
+      "wraps": [
+        "hook_pools",
+        "hook_basis",
+        "hook_apr",
+        "hook_vault",
+        "hook_events"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Vault List /farm/auto",
+      "wraps": [
+        "listrow",
+        "listextras"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Vault Detail /farm/auto/:slug",
+      "wraps": [
+        "statshead",
+        "range",
+        "lpbreak",
+        "mypos",
+        "fees",
+        "vaultinfo"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Action Sheet (480px right)",
+      "wraps": [
+        "sheet_dep",
+        "sheet_wd"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Portfolio /portfolio (top nav)",
+      "wraps": [
+        "pf_risk",
+        "pf_overview",
+        "pf_rows",
+        "pf_lev",
+        "pf_points"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "gw-pools",
+      "from": "gateway",
+      "to": "py_pools",
+      "label": "topV3Pools"
+    },
+    {
+      "id": "ar-positions",
+      "from": "archive",
+      "to": "py_positions",
+      "label": "entry price"
+    },
+    {
+      "id": "rpc-feeapr",
+      "from": "rpc",
+      "to": "py_feeapr",
+      "label": "feeGrowth"
+    },
+    {
+      "id": "pools-json",
+      "from": "py_pools",
+      "to": "json_pools"
+    },
+    {
+      "id": "positions-json",
+      "from": "py_positions",
+      "to": "json_positions"
+    },
+    {
+      "id": "feeapr-json",
+      "from": "py_feeapr",
+      "to": "json_feeapr"
+    },
+    {
+      "id": "jp-hook",
+      "from": "json_pools",
+      "to": "hook_pools"
+    },
+    {
+      "id": "jpos-hook",
+      "from": "json_positions",
+      "to": "hook_basis"
+    },
+    {
+      "id": "japr-hook",
+      "from": "json_feeapr",
+      "to": "hook_apr"
+    },
+    {
+      "id": "rpc-vault",
+      "from": "rpc",
+      "to": "hook_vault",
+      "label": "30s reads",
+      "variant": "emphasis",
+      "labelDy": -14,
+      "labelDx": 230
+    },
+    {
+      "id": "rpc-events",
+      "from": "rpc",
+      "to": "hook_events",
+      "label": "getLogs",
+      "fromSide": "bottom",
+      "toSide": "left"
+    },
+    {
+      "id": "vault-list",
+      "from": "hook_vault",
+      "to": "listrow",
+      "label": "live state",
+      "variant": "emphasis"
+    },
+    {
+      "id": "pools-list",
+      "from": "hook_pools",
+      "to": "listrow",
+      "label": "pre-launch",
+      "variant": "dashed"
+    },
+    {
+      "id": "vault-stats",
+      "from": "hook_vault",
+      "to": "statshead",
+      "variant": "emphasis"
+    },
+    {
+      "id": "apr-stats",
+      "from": "hook_apr",
+      "to": "statshead",
+      "label": "net APR",
+      "variant": "dashed"
+    },
+    {
+      "id": "basis-mypos",
+      "from": "hook_basis",
+      "to": "mypos",
+      "label": "At deposit·Yield",
+      "variant": "dashed"
+    },
+    {
+      "id": "events-mypos",
+      "from": "hook_events",
+      "to": "mypos",
+      "label": "vs HODL",
+      "variant": "dashed"
+    },
+    {
+      "id": "list-detail",
+      "from": "listrow",
+      "to": "statshead",
+      "variant": "emphasis"
+    },
+    {
+      "id": "detail-sheet",
+      "from": "mypos",
+      "to": "sheet_dep",
+      "label": "Deposit btn",
+      "variant": "emphasis",
+      "labelDx": 56,
+      "labelDy": 42
+    },
+    {
+      "id": "detail-sheetwd",
+      "from": "vaultinfo",
+      "to": "sheet_wd",
+      "label": "Withdraw btn",
+      "labelDx": 58,
+      "labelDy": 42
+    },
+    {
+      "id": "mypos-overview",
+      "from": "mypos",
+      "to": "pf_overview",
+      "label": "aggregate",
+      "variant": "dashed",
+      "fromSide": "left",
+      "toSide": "left",
+      "labelDx": -56
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Module contents (fields)",
+      "items": [
+        "List row: pair+fee badge, Net APR (signed color), Daily, TVL, My deposit, coming-soon badge",
+        "Detail: 4-card stats, min/cur/max + range bar + CALM, LP breakdown bars, My position 6 cells, fees, contracts + last adjust",
+        "Sheets: % fills in vault ratio, preview (take/receive), 3(+1) fee lines",
+        "Portfolio: risk summary (liq-nearest first), 4 totals, per-vault rows, leveraged table, Points"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Upstream contract",
+      "items": [
+        "Everything on-chain: useAutoVault is the shared 30s source — same maths everywhere (not same-block atomic)",
+        "Cron JSONs go live with mainnet deploy; frontend degrades to dashes when absent",
+        "Cost basis replays vault events priced at their own entry blocks (archive RPC)"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Downstream gaps (tracked)",
+      "items": [
+        "Leverage has no cost-basis feed → excluded from Portfolio totals",
+        "NVDA/SPY need a stable quote source before deploy (token1 not USD)",
+        "Liquidation-risk summary not yet a Portfolio section"
+      ]
+    }
+  ]
+}

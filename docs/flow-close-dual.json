@@ -1,0 +1,57 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "close() dual-borrow 缺口结算流程",
+    "output": "flow-close-dual.html",
+    "quality_profile": "standard",
+    "subtitle": "匹配还债 → 缺口三分支(无/盈余够/不够降级)→ 双币出金"
+  },
+  "lanes": [
+    { "id": "main", "label": "主流程" },
+    { "id": "calc", "label": "守卫 / 分支" },
+    { "id": "exc", "label": "revert 分支", "variant": "exception" }
+  ],
+  "phases": [
+    { "id": "guard", "label": "守卫 / 比例", "fromCol": 0, "toCol": 2 },
+    { "id": "settleGap", "label": "匹配 + 缺口结算", "fromCol": 3, "toCol": 4, "variant": "emphasis" },
+    { "id": "out", "label": "出金记账", "fromCol": 5, "toCol": 5, "variant": "dashed" }
+  ],
+  "mainPath": ["entry", "owner", "sizing", "pull", "gap", "out"],
+  "nodes": [
+    { "id": "entry", "lane": "main", "col": 0, "type": "external", "label": "close(id, %)", "sublabel": "持有人调用", "width": 150 },
+    { "id": "owner", "lane": "calc", "col": 1, "type": "security", "label": "是持有人?", "sublabel": "ownerOf[id]==caller", "width": 160 },
+    { "id": "sizing", "lane": "calc", "col": 2, "type": "backend", "label": "算平仓量", "sublabel": "%≥100全平burn·dLiq向下取整", "width": 180, "tag": "全平/部分" },
+    { "id": "pull", "lane": "main", "col": 3, "type": "backend", "label": "撤仓·收费·匹配还债", "sublabel": "WETH还WETH债·USDG还USDG债", "width": 200 },
+    { "id": "gap", "lane": "calc", "col": 4, "type": "backend", "label": "缺口 S = due − got", "sublabel": "无 / 盈余够 / 盈余不够", "width": 180, "tag": "三分支" },
+    { "id": "buyGap", "lane": "main", "col": 4, "type": "backend", "label": "exactOutput 买缺口", "sublabel": "投入≤maxSwapIn·补还短缺腿", "width": 190 },
+    { "id": "degrade", "lane": "calc", "col": 5, "type": "backend", "label": "降级 exactInput", "sublabel": "盈余全换·部分覆盖·残债坏账", "width": 190, "tag": "水下" },
+    { "id": "out", "lane": "main", "col": 5, "type": "backend", "label": "双币出金·记账", "sublabel": "部分平查健康·残债emit BadDebt", "width": 190 },
+
+    { "id": "revHolder", "lane": "exc", "col": 1, "type": "external", "label": "revert", "sublabel": "NotHolder", "width": 150 },
+    { "id": "revZero", "lane": "exc", "col": 2, "type": "external", "label": "revert", "sublabel": "ZERO_LIQ", "width": 150 },
+    { "id": "revMaxIn", "lane": "exc", "col": 4, "type": "external", "label": "revert", "sublabel": "缺口swap超maxSwapIn", "width": 190 },
+    { "id": "revSlip", "lane": "exc", "col": 5, "type": "external", "label": "revert", "sublabel": "SLIPPAGE / UNHEALTHY", "width": 190 }
+  ],
+  "edges": [
+    { "id": "e1", "from": "entry", "to": "owner", "label": "校验", "variant": "emphasis" },
+    { "id": "e2", "from": "owner", "to": "sizing", "label": "是", "variant": "emphasis" },
+    { "id": "e3", "from": "sizing", "to": "pull", "label": "dLiq>0", "variant": "emphasis" },
+    { "id": "e4", "from": "pull", "to": "gap", "variant": "emphasis" },
+    { "id": "e5", "from": "gap", "to": "out", "label": "无缺口", "variant": "emphasis" },
+    { "id": "e6", "from": "gap", "to": "buyGap", "label": "盈余够", "variant": "default" },
+    { "id": "e7", "from": "buyGap", "to": "out", "variant": "default" },
+    { "id": "e8", "from": "gap", "to": "degrade", "label": "盈余不够", "variant": "security" },
+    { "id": "e9", "from": "degrade", "to": "out", "label": "残债→BadDebt", "variant": "security" },
+
+    { "id": "x1", "from": "owner", "to": "revHolder", "label": "否", "variant": "security", "role": "error" },
+    { "id": "x2", "from": "sizing", "to": "revZero", "label": "=0", "variant": "security", "role": "error" },
+    { "id": "x3", "from": "buyGap", "to": "revMaxIn", "label": "超限", "variant": "security", "role": "error" },
+    { "id": "x4", "from": "out", "to": "revSlip", "label": "不足/过线", "variant": "security", "role": "error" }
+  ],
+  "cards": [
+    { "dot": "rose", "title": "匹配优先", "items": ["撤出 WETH 先还 WETH 债、USDG 先还 USDG 债(零 swap)", "应还债向上取整,偏向出借人", "先收 fee 抽 10%,防绕过 harvest 抽成"] },
+    { "dot": "amber", "title": "缺口三分支", "items": ["缺口≈0(价回开仓点):零 swap", "盈余够:exactOutput 买入恰好缺口,maxSwapIn 当保险丝", "盈余不够(深水下):降级 exactInput 全换,部分覆盖,残债记坏账——不许 revert 卡死用户"] },
+    { "dot": "emerald", "title": "出金与红线", "items": ["剩余双币 in-kind 退用户(minOutRisk/minOutLoan 下限)", "部分平仓末尾查健康,全平豁免", "两腿都榨干才 BadDebt,不许一腿盈余另一腿记坏账"] }
+  ]
+}

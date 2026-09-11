@@ -1,0 +1,21 @@
+# Foundry build artifacts
+out/
+cache/
+broadcast/
+
+# Foundry dependencies (restore with `forge install`; they carry their own .git)
+lib/
+
+# Deployment keys and testnet wallets — NEVER commit
+.testnet/
+*.key
+*.pem
+.env
+.env.*
+
+# OS noise
+.DS_Store
+reference/extra-full/
+*.visual-check.json
+*.visual-check.*.png
+*.visual-check.html

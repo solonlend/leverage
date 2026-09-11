@@ -1,0 +1,49 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "open() 内部流程与分支",
+    "output": "flow-open.html",
+    "quality_profile": "standard",
+    "subtitle": "开仓:守卫 → 借款 zap → 铸 LP → 健康校验"
+  },
+  "lanes": [
+    { "id": "main", "label": "主流程" },
+    { "id": "calc", "label": "守卫 / 分支" },
+    { "id": "exc", "label": "revert 分支", "variant": "exception" }
+  ],
+  "phases": [
+    { "id": "guard", "label": "守卫", "fromCol": 0, "toCol": 1 },
+    { "id": "borrow", "label": "借款 zap", "fromCol": 2, "toCol": 3, "variant": "emphasis" },
+    { "id": "mint", "label": "铸仓 + 校验", "fromCol": 4, "toCol": 5, "variant": "dashed" }
+  ],
+  "mainPath": ["entry", "range", "borrow", "zap", "mint", "health"],
+  "nodes": [
+    { "id": "entry", "lane": "main", "col": 0, "type": "external", "label": "open(params)", "sublabel": "借款人调用", "width": 150 },
+    { "id": "range", "lane": "calc", "col": 1, "type": "security", "label": "区间合法?", "sublabel": "两侧跨价·宽度≥下限", "width": 170 },
+    { "id": "borrow", "lane": "main", "col": 2, "type": "backend", "label": "拉本金 + 借款", "sublabel": "pull invest·新建债仓·borrow USDG", "width": 190 },
+    { "id": "zap", "lane": "calc", "col": 3, "type": "backend", "label": "zap 拆两腿", "sublabel": "按 loanIsC0 决定换哪腿", "width": 180, "tag": "币序分支" },
+    { "id": "mint", "lane": "main", "col": 4, "type": "backend", "label": "铸 LP + 建凭证", "sublabel": "mint LP·发 Solon NFT·退零头", "width": 190 },
+    { "id": "health", "lane": "main", "col": 5, "type": "backend", "label": "健康校验", "sublabel": "价×LLTV≥债务 才放行", "width": 180 },
+
+    { "id": "revRange", "lane": "exc", "col": 1, "type": "external", "label": "revert", "sublabel": "RangeTooNarrow", "width": 170 },
+    { "id": "revZeroLiq", "lane": "exc", "col": 4, "type": "external", "label": "revert", "sublabel": "ZERO_LIQ / SLIPPAGE_LIQ", "width": 190 },
+    { "id": "revUnhealthy", "lane": "exc", "col": 5, "type": "external", "label": "revert", "sublabel": "UNHEALTHY_OPEN", "width": 180 }
+  ],
+  "edges": [
+    { "id": "e1", "from": "entry", "to": "range", "label": "校验区间", "variant": "emphasis" },
+    { "id": "e2", "from": "range", "to": "borrow", "label": "合法", "variant": "emphasis" },
+    { "id": "e3", "from": "borrow", "to": "zap", "variant": "emphasis" },
+    { "id": "e4", "from": "zap", "to": "mint", "variant": "emphasis" },
+    { "id": "e5", "from": "mint", "to": "health", "variant": "emphasis" },
+
+    { "id": "x1", "from": "range", "to": "revRange", "label": "太窄", "variant": "security", "role": "error" },
+    { "id": "x2", "from": "mint", "to": "revZeroLiq", "label": "流动性不足", "variant": "security", "role": "error" },
+    { "id": "x3", "from": "health", "to": "revUnhealthy", "label": "超杠杆", "variant": "security", "role": "error" }
+  ],
+  "cards": [
+    { "dot": "rose", "title": "守卫", "items": ["区间必须两侧跨当前价、宽度≥最小 tick", "铸出流动性必须>0(拒零流动性垃圾仓)", "zap 被夹导致流动性缩水→SLIPPAGE_LIQ"] },
+    { "dot": "amber", "title": "借款 zap", "items": ["先拉用户本金,再向 LendingPool 借 USDG", "按 borrowFeeBps 抽开仓费(首发=0)", "zap 按 loanIsC0 把 USDG 拆成两腿所需数量"] },
+    { "dot": "emerald", "title": "开仓即须健康", "items": ["铸 LP 后校验 fairValue×LLTV≥债务", "不健康直接 revert UNHEALTHY_OPEN", "堵死'秒开可清算仓'把出借人置于险地(红队修复)"] }
+  ]
+}

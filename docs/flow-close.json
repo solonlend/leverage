@@ -1,0 +1,49 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "close() 内部流程与分支",
+    "output": "flow-close.html",
+    "quality_profile": "standard",
+    "subtitle": "平仓:全平/部分分支 → 撤仓收费 → 还债出金(含坏账分支)"
+  },
+  "lanes": [
+    { "id": "main", "label": "主流程" },
+    { "id": "calc", "label": "守卫 / 分支" },
+    { "id": "exc", "label": "revert 分支", "variant": "exception" }
+  ],
+  "phases": [
+    { "id": "guard", "label": "守卫 / 比例", "fromCol": 0, "toCol": 2 },
+    { "id": "pull", "label": "撤仓收费", "fromCol": 3, "toCol": 3, "variant": "emphasis" },
+    { "id": "settle", "label": "还债出金", "fromCol": 4, "toCol": 5, "variant": "dashed" }
+  ],
+  "mainPath": ["entry", "owner", "sizing", "pull", "repay", "out"],
+  "nodes": [
+    { "id": "entry", "lane": "main", "col": 0, "type": "external", "label": "close(id, %)", "sublabel": "仓位持有人调用", "width": 160 },
+    { "id": "owner", "lane": "calc", "col": 1, "type": "security", "label": "是持有人?", "sublabel": "ownerOf[id]==caller", "width": 160 },
+    { "id": "sizing", "lane": "calc", "col": 2, "type": "backend", "label": "算平仓量", "sublabel": "%≥100→全平burn;dLiq>0", "width": 180, "tag": "全平/部分分支" },
+    { "id": "pull", "lane": "main", "col": 3, "type": "backend", "label": "撤仓 + 收费", "sublabel": "先收 fee 抽10%·再撤本金·换USDG", "width": 190 },
+    { "id": "repay", "lane": "main", "col": 4, "type": "backend", "label": "按比例还债", "sublabel": "repay=债×%;gotLoan 不足则封顶", "width": 190 },
+    { "id": "out", "lane": "main", "col": 5, "type": "backend", "label": "出金 + 记账", "sublabel": "余额退用户·全平残债>0→BadDebt", "width": 190 },
+
+    { "id": "revHolder", "lane": "exc", "col": 1, "type": "external", "label": "revert", "sublabel": "NotHolder", "width": 150 },
+    { "id": "revZeroLiq", "lane": "exc", "col": 2, "type": "external", "label": "revert", "sublabel": "ZERO_LIQ", "width": 150 },
+    { "id": "revSlip", "lane": "exc", "col": 5, "type": "external", "label": "revert", "sublabel": "SLIPPAGE(minOut)", "width": 170 }
+  ],
+  "edges": [
+    { "id": "e1", "from": "entry", "to": "owner", "label": "校验持有人", "variant": "emphasis" },
+    { "id": "e2", "from": "owner", "to": "sizing", "label": "是", "variant": "emphasis" },
+    { "id": "e3", "from": "sizing", "to": "pull", "label": "dLiq>0", "variant": "emphasis" },
+    { "id": "e4", "from": "pull", "to": "repay", "variant": "emphasis" },
+    { "id": "e5", "from": "repay", "to": "out", "variant": "emphasis" },
+
+    { "id": "x1", "from": "owner", "to": "revHolder", "label": "否", "variant": "security", "role": "error" },
+    { "id": "x2", "from": "sizing", "to": "revZeroLiq", "label": "=0", "variant": "security", "role": "error" },
+    { "id": "x3", "from": "out", "to": "revSlip", "label": "不足", "variant": "security", "role": "error" }
+  ],
+  "cards": [
+    { "dot": "rose", "title": "守卫", "items": ["只有仓位持有人能平(ownerOf 校验)", "平仓量 dLiq 不能为 0", "全平(%≥100)会 burn 掉仓位 NFT"] },
+    { "dot": "amber", "title": "收费先于撤本金", "items": ["先单独收累积手续费并抽协议 10%", "堵死'直接平仓白拿 fee 绕过 harvest 抽成'", "风险腿换成 USDG,统一出金"] },
+    { "dot": "emerald", "title": "还债与坏账", "items": ["按 % 还对应比例债务;gotLoan 不足则只还到 gotLoan", "剩余 USDG 退还用户;不足 minOut 则 revert", "全平后仍有残债 = 坏账 → emit BadDebt"] }
+  ]
+}

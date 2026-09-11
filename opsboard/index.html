@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SOLON · OPS BOARD</title>
+<style>
+  :root{--bg:#000;--fg:#fff;--card:#0a0a0a;--muted:#1a1a1a;--border:#262626;--dim:#8a8a8a;--warn:#ffd75f;--ok:#7fdc9a;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:"Geist Mono","SF Mono",Menlo,Consolas,monospace;font-size:13px;line-height:1.55}
+  .wrap{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+  pre.logo{color:var(--fg);font-size:11px;line-height:1.15;margin:0 0 4px;overflow-x:auto}
+  .sub{color:var(--dim);margin-bottom:28px}
+  .sub b{color:var(--warn)}
+  h2{font-size:14px;letter-spacing:.12em;text-transform:uppercase;border-bottom:1px solid var(--border);padding-bottom:8px;margin:44px 0 14px}
+  h2 .n{color:var(--dim);margin-right:8px}
+  table{width:100%;border-collapse:collapse;background:var(--card);font-size:12.5px}
+  th{color:var(--dim);font-weight:normal;text-align:left;letter-spacing:.06em}
+  th,td{border:1px solid var(--border);padding:7px 10px;vertical-align:top}
+  td.addr{font-size:11.5px;word-break:break-all;white-space:nowrap}
+  td.addr a{color:var(--fg);text-decoration:none;border-bottom:1px dotted var(--dim)}
+  td.addr a:hover{border-bottom-color:var(--fg)}
+  .tag{display:inline-block;padding:1px 7px;font-size:10.5px;letter-spacing:.08em;border:1px solid var(--border);white-space:nowrap}
+  .frozen{color:var(--dim);border-color:var(--border)}
+  .mutable{color:#000;background:var(--ok);border-color:var(--ok)}
+  .gated{color:var(--warn);border-color:var(--warn)}
+  .note{color:var(--dim)}
+  .danger{border:1px solid var(--warn);background:#151002;color:var(--warn);padding:10px 14px;margin:14px 0}
+  .card{border:1px solid var(--border);background:var(--card);padding:12px 16px;margin:10px 0}
+  code{background:var(--muted);padding:1px 5px;font-size:11.5px}
+  .scroll{overflow-x:auto}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:840px){.grid2{grid-template-columns:1fr}}
+  footer{margin-top:56px;color:var(--dim);font-size:11px;border-top:1px solid var(--border);padding-top:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<pre class="logo">
+ ███████╗ ██████╗ ██╗      ██████╗ ███╗   ██╗
+ ██╔════╝██╔═══██╗██║     ██╔═══██╗████╗  ██║
+ ███████╗██║   ██║██║     ██║   ██║██╔██╗ ██║
+ ╚════██║██║   ██║██║     ██║   ██║██║╚██╗██║
+ ███████║╚██████╔╝███████╗╚██████╔╝██║ ╚████║
+ ╚══════╝ ╚═════╝ ╚══════╝ ╚═════╝ ╚═╝  ╚═══╝  OPS BOARD · 合约与参数登记簿
+</pre>
+<div class="sub">杠杆 LP（dual-borrow）全套合约地址 · 参数 · 费用流向 · 可改/焊死标记 —— <b>仅限本地，不对外发布</b></div>
+
+<h2><span class="n">00</span>图例与角色</h2>
+<div class="grid2">
+<div class="card">
+  <span class="tag frozen">焊死</span> immutable/constant，部署后永不可改，要改=发新金库迁移<br>
+  <span class="tag mutable">可调</span> 有权限地址随时可改（括号内=谁能改）<br>
+  <span class="tag gated">部署闸</span> 上线前必须逐项核对（见 DEPLOY-CHECKLIST.md）
+</div>
+<div class="card">
+  <b>Sepolia 测试环境所有角色 = 部署测试号</b><br>
+  <code>0xe3c5fC3A24438DACd0262b4E74A3B163630C9922</code><br>
+  <span class="note">governor / keeper / treasury / 出借人 / 借款人 全是它（私钥仅存本机 .testnet/deployer.json）。生产环境 governor 与 treasury 必须为多签 —— 见 §04 黄框。</span>
+</div>
+</div>
+
+<h2><span class="n">01</span>Sepolia 测试网 · V3 栈（chain 11155111 · vaultId 1）</h2>
+<div class="scroll"><table>
+<tr><th>合约</th><th>地址</th><th>说明 / 可调项</th></tr>
+<tr><td>UniV3DualVault v1.1（退役,vaultId 3）</td><td class="addr"><a href="https://sepolia.etherscan.io/address/0xA4194E8B30737a28BCF10FbA9824A3EFB91Eafea">0xA4194E8B30737a28BCF10FbA9824A3EFB91Eafea</a></td><td>v1.1 = +harvest(claim/复投)。前端指向此实例。可调项仅 <code>setLiquidator</code> <span class="tag mutable">governor</span></td></tr>
+<tr><td>UniV3DualVault v1.3（现役,vaultId 6）</td><td class="addr"><a href="https://sepolia.etherscan.io/address/0x6fce1e0fC407D1d9a1214C1B13EF6360F8c84a12">0x6fce1e0fC407D1d9a1214C1B13EF6360F8c84a12</a></td><td>v1.3 = v1.1 + increase(杠杆加仓) + 粉尘缺口价值口径修复。<b>前端指向此实例</b></td></tr>
+<tr><td>UniV4DualVault v1.3（现役,vaultId 7）</td><td class="addr"><a href="https://sepolia.etherscan.io/address/0x105e019b288307455822863CdC2E6B03BdFF347F">0x105e019b288307455822863CdC2E6B03BdFF347F</a></td><td>同上(V4 版,Permit2 结算)。粉尘修复真链验证 tx 0x46dd4b83…5221f</td></tr>
+<tr><td>UniV3DualVault v1.0（退役,vaultId 1）</td><td class="addr">0x2D8C63d9f90807A7febB04300B7E5c4997BAC559</td><td>暴打战役所用实例;换代=新实例注册新 vaultId 的实操样例</td></tr>
+<tr><td>LendingPool（双储备）</td><td class="addr"><a href="https://sepolia.etherscan.io/address/0xC2B5F9FdDb21904da132178Ab68AE5a21D039De6">0xC2B5F9FdDb21904da132178Ab68AE5a21D039De6</a></td><td>reserve 1 = USDG（LOAN）· reserve 2 = WETH（RISK）。V3/V4 两金库共用</td></tr>
+<tr><td>eToken USDG (r1)</td><td class="addr">0x8a902F74Ff242ea23b56B0d73feA47A7b0cA9Be1</td><td>出借人凭证，池内现金也存这里</td></tr>
+<tr><td>eToken WETH (r2)</td><td class="addr">0xa8a00Aa99B81fA1969D97824573D9aD4BF2A58c4</td><td>同上（WETH 腿）</td></tr>
+<tr><td>LpShareOracleV4</td><td class="addr"><a href="https://sepolia.etherscan.io/address/0xFD1F26BFb9E2D5eAc1b195B1272f4409bc3546bC">0xFD1F26BFb9E2D5eAc1b195B1272f4409bc3546bC</a></td><td>Chainlink 形状双喂价估值，全 immutable；maxStaleness = 1 day <span class="tag frozen">焊死</span></td></tr>
+<tr><td>SwapExecutorV3</td><td class="addr">0x769c6A3E2C0b749c133a9428bA6ACF184158e5EB</td><td>exactInput/exactOutput，绑定官方 SwapRouter02 <span class="tag frozen">焊死</span></td></tr>
+<tr><td>AddressRegistry</td><td class="addr">0x1f9315343616f85Eb932B46A899A44daed44f8E4</td><td><code>setAddress(TREASURY / VAULT_FACTORY)</code> <span class="tag mutable">owner</span></td></tr>
+<tr><td>SolonVaultRegistry</td><td class="addr">0x66d73d34740700bE62586271985aEa8DdA9b5c8a</td><td>vaultId→地址登记：只能登记新 id，已登记不可改指 <span class="tag mutable">owner·两步转移</span></td></tr>
+<tr><td>V3 池（mock 对）</td><td class="addr"><a href="https://sepolia.etherscan.io/address/0x2297ea94b1aEB1517DB9B7fCeb2c7D6A1e2238E2">0x2297ea94b1aEB1517DB9B7fCeb2c7D6A1e2238E2</a></td><td>mockWETH/mockUSDG · fee 0.01% · Sepolia 官方 V3 Factory 所建</td></tr>
+<tr><td>mock WETH / mock USDG</td><td class="addr">0x8185fDD602B8B36296565969071098024357F8eE<br>0x0FcfEf2b5e6de1f937751Fe5a5eb0CE8b924bffe</td><td>开放 mint，<b>仅测试</b></td></tr>
+<tr><td>ethFeed / usdgFeed（可控）</td><td class="addr">0x11D0E38201cC514e09BC3117e6725e77F43d0106<br>0xc4EDB75f7F7735c62A5398eE4D9a4619419c763A</td><td>owner 可拧价格/时间戳，用于暴跌·脱锚·停摆演练，<b>仅测试</b></td></tr>
+</table></div>
+
+<h2><span class="n">02</span>Sepolia 测试网 · V4 栈（vaultId 2 · 共用上面的借贷池）</h2>
+<div class="scroll"><table>
+<tr><th>合约</th><th>地址</th><th>说明</th></tr>
+<tr><td>UniV4DualVault</td><td class="addr"><a href="https://sepolia.etherscan.io/address/0x79491d4462E8E8cb118FF247f92796f1F08826A5">0x79491d4462E8E8cb118FF247f92796f1F08826A5</a></td><td>Permit2 结算版。可调项：<code>setLiquidator</code>、<code>revokePermit2</code>（紧急阀）<span class="tag mutable">governor</span></td></tr>
+<tr><td>LpMathExt（外置数学库）</td><td class="addr">0x9cDE9e4CeA4601e4195D727eD52e552A3Bf32036</td><td>V4 金库 delegatecall 依赖（EIP-170 体积改造产物）<span class="tag gated">部署闸·地址须登记</span></td></tr>
+<tr><td>SwapExecutorV3（V4 缺口用）</td><td class="addr">0x5593590b5d19a18fe173214130150f437b23B894</td><td>缺口结算走 V3 路由（与 RH 生产一致）</td></tr>
+<tr><td>v4 poolId</td><td class="addr">0xefbf5c0315982424f32fd55ffed4ac544d1cb66a166456d7e1854a157483f3b9</td><td>mockWETH/mockUSDG · fee 100 · spacing 1 · 无 hook</td></tr>
+<tr><td>官方 PoolManager</td><td class="addr">0xE03A1074c86CFeDd5C142C4F04F1a1536e203543</td><td rowspan="4">Uniswap 官方 Sepolia v4 部署（已逐一 cast codesize 验码）</td></tr>
+<tr><td>官方 PositionManager</td><td class="addr">0x429ba70129df741B2Ca2a85BC3A2a3328e5c09b4</td></tr>
+<tr><td>官方 StateView</td><td class="addr">0xE1Dd9c3fA50EDB962E442f60DfBc432e24537E4C</td></tr>
+<tr><td>Permit2（canonical，全链同址）</td><td class="addr">0x000000000022D473030F116dDEE9F6B43aC78BA3</td></tr>
+</table></div>
+
+<h2><span class="n">03</span>金库参数（V3 / V4 两金库同参）</h2>
+<div class="scroll"><table>
+<tr><th>参数</th><th>当前值</th><th>属性</th><th>含义</th></tr>
+<tr><td>LLTV</td><td>0.8e18（80%）</td><td><span class="tag frozen">焊死</span></td><td>债务/仓位价值超过 80% 即可清算</td></tr>
+<tr><td>CLOSE_FACTOR_BPS</td><td>5000（50%）</td><td><span class="tag frozen">焊死</span></td><td>单次清算最多还一半债（连打多轮直至健康/清空）</td></tr>
+<tr><td>LIQ_BONUS_BPS</td><td>800（8%）</td><td><span class="tag frozen">焊死</span></td><td>清算人奖励</td></tr>
+<tr><td>PROTOCOL_FEE_BPS</td><td>1000（10%）</td><td><span class="tag frozen">焊死</span></td><td>平仓利润与清算的协议抽成 → 打给 GOVERNOR（见 §04）</td></tr>
+<tr><td>HARVEST_FEE_BPS</td><td>1000（10%）</td><td><span class="tag frozen">焊死</span></td><td>LP 手续费收割抽成 → 打给 GOVERNOR</td></tr>
+<tr><td>MIN_WIDTH_TICKS</td><td>10</td><td><span class="tag frozen">焊死</span></td><td>最窄区间限制</td></tr>
+<tr><td>MAX_GAP_SLIPPAGE_BPS</td><td>500（5%）</td><td><span class="tag frozen">焊死·常量</span></td><td>降级换币相对预言机公允价的最大容忍（异构轮 C1 修复）</td></tr>
+<tr><td>GAP_EPS / MIN_LIQ_VALUE</td><td>1e3 / 1e4</td><td><span class="tag frozen">焊死·常量</span></td><td>粉尘容忍 / 粉尘清算门槛</td></tr>
+<tr><td>oracle maxStaleness</td><td>1 day（Sepolia）· 生产另定</td><td><span class="tag gated">部署闸</span></td><td>喂价超龄即全金库 fail-closed（停摆演练已实测）</td></tr>
+<tr><td>liquidators[addr]</td><td>测试号=true</td><td><span class="tag mutable">governor</span></td><td>清算人白名单，<code>setLiquidator(addr,bool)</code></td></tr>
+<tr><td>permit2Armed[token]（V4）</td><td>已上膛</td><td><span class="tag mutable">governor</span></td><td><code>revokePermit2(token)</code> 一键清零额度，下次 mint 自动重上膛</td></tr>
+</table></div>
+
+<h2><span class="n">04</span>费用流向 · 收款地址</h2>
+<div class="scroll"><table>
+<tr><th>费用</th><th>费率</th><th>收款地址</th><th>可改吗</th></tr>
+<tr><td>平仓协议费（盈利部分）</td><td>10%</td><td>GOVERNOR</td><td><span class="tag frozen">收款人=GOVERNOR，焊死</span></td></tr>
+<tr><td>清算协议抽成</td><td>10%</td><td>GOVERNOR</td><td><span class="tag frozen">同上</span></td></tr>
+<tr><td>LP 手续费收割抽成</td><td>10%</td><td>GOVERNOR</td><td><span class="tag frozen">同上</span></td></tr>
+<tr><td>清算尾款收款失败兜底</td><td>—</td><td>TREASURY（registry）</td><td><span class="tag mutable">registry owner 可改</span></td></tr>
+<tr><td>借贷利息</td><td>利率曲线</td><td>eToken 持有人（出借人）+ 池内准备金</td><td><span class="tag mutable">利率参数=池 owner</span></td></tr>
+</table></div>
+<div class="danger">⚠️ 生产部署最重要的一条：金库的费用收款人 = GOVERNOR 且 <b>immutable</b>。部署那一刻填的 governor 地址就是永久收钱地址 + 唯一管理钥匙 —— 生产必须直接填多签，部署后无法换。测试环境现在填的是测试号。</div>
+
+<h2><span class="n">05</span>额度与封顶开关（生产的"小额封顶"就在这里拧）</h2>
+<div class="scroll"><table>
+<tr><th>开关</th><th>当前值（测试）</th><th>怎么改</th><th>用途</th></tr>
+<tr><td>credits[reserve1][vault1]（USDG 额度）</td><td>uint128.max（不设限）</td><td><code>lending.setCreditsOfVault(1, 1, x)</code> <span class="tag mutable">池 owner</span></td><td rowspan="4">生产上线改成小额封顶（如 5万 U / 20 ETH），跑稳后分档抬升；这是防未知漏洞的最后保险丝</td></tr>
+<tr><td>credits[reserve2][vault1]（WETH 额度）</td><td>uint128.max</td><td><code>setCreditsOfVault(1, 2, x)</code></td></tr>
+<tr><td>credits[reserve1][vault2]（V4·USDG）</td><td>uint128.max</td><td><code>setCreditsOfVault(2, 1, x)</code></td></tr>
+<tr><td>credits[reserve2][vault2]（V4·WETH）</td><td>uint128.max</td><td><code>setCreditsOfVault(2, 2, x)</code></td></tr>
+<tr><td>金库借款白名单</td><td>vault 1、2 已开</td><td><code>enableVaultToBorrow(id)</code> <span class="tag mutable">池 owner</span></td><td>新金库上线的总开关</td></tr>
+<tr><td>单仓位上限</td><td>未实现</td><td>—</td><td><span class="note">合约层暂无，v1 由前端限制 + credits 总量兜底；如需硬上限列入上线参数决策</span></span></td></tr>
+</table></div>
+
+<h2><span class="n">06</span>Robinhood 主网（chain 4663 · 待部署 · 全部 <span class="tag gated">部署闸</span>）</h2>
+<div class="scroll"><table>
+<tr><th>依赖</th><th>地址（已链上验证）</th><th>备注</th></tr>
+<tr><td>WETH / USDG</td><td class="addr">0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73<br>0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168</td><td>WETH=token0（risk）· USDG=token1（loan）· loanIsC0=false</td></tr>
+<tr><td>ETH/USD · USDG/USD 喂价</td><td class="addr">0x78F3556b67E17Df817D51Ef5a990cDaF09E8d3A9<br>0x61B7e5650328764B076A108EFF5fa7282a1B9aD2</td><td>fork 实测 1 ETH ≈ 2511 USDG</td></tr>
+<tr><td>V3 池 WETH/USDG fee100</td><td class="addr">0x52e65B17fB6E5BA00Ed806f37Afcd2DaA50271Ca</td><td>最深池，V3 金库绑定目标</td></tr>
+<tr><td>V3 NFPM / SwapRouter02</td><td class="addr">0x73991a25C818Bf1f1128dEAaB1492D45638DE0D3<br>0xCaf681a66D020601342297493863E78C959E5cb2</td><td rowspan="2">V4 池 WETH/USDG fee100 无 hook 已存在于主网（fork 实测 PoolAlreadyInitialized），V4 金库可直接绑定</td></tr>
+<tr><td>V4 PoolManager / PositionManager</td><td class="addr">0x8366a39CC670B4001A1121B8F6A443A643e40951<br>0x58daec3116aae6D93017bAAea7749052E8a04fA7</td></tr>
+</table></div>
+<div class="card">
+生产部署硬前置（详见 <code>DEPLOY-CHECKLIST.md</code> 全部阶段 + D.1~D.8）：governor/treasury=多签 → 双储备种子存款 → credits 小额封顶 → canonical Permit2 codesize 验证 → LpMathExt 库地址登记 → StateView 部署与验证 → 最小仓 SETTLE_PAIR 冒烟 → 双 keeper → <b>外部审计</b>。
+</div>
+
+<footer>
+更新：2026-09-04 · 数据来源：broadcast/*/11155111/run-latest.json + 链上 cast 核对 · 战报：RED-TEAM-2026-09-04.md<br>
+本页仅存本机 stocklend/leverage/opsboard/，服务只绑 127.0.0.1，勿公网穿透。
+</footer>
+</div>
+</body>
+</html>

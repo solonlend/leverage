@@ -1,0 +1,18 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+solc = "0.8.24"
+optimizer = true
+optimizer_runs = 80 # 200→80:V4 dual 增 increase/harvest 后贴 EIP-170,换体积(gas 差异微小)
+via_ir = true
+fs_permissions = [{ access = "read", path = "./test/vectors" }]
+ffi = false
+
+[fuzz]
+runs = 5000
+
+[invariant]
+runs = 300
+depth = 40
+fail_on_revert = false

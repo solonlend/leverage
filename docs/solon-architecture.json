@@ -1,0 +1,364 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Solon 杠杆 LP 合约架构(上下层)",
+    "output": "solon-architecture.html",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1360,
+      640
+    ],
+    "views": [
+      {
+        "id": "borrow-path",
+        "label": "开仓杠杆路径",
+        "focus": [
+          "borrower",
+          "vault",
+          "lendingpool",
+          "swapexec",
+          "uniswap"
+        ],
+        "note": "借款人存本金→金库借 USDG→zap 换币→在 Uniswap 铸 LP。"
+      },
+      {
+        "id": "lender-path",
+        "label": "出借人路径",
+        "focus": [
+          "lender",
+          "lendingpool",
+          "etoken"
+        ],
+        "note": "出借人存 USDG 吃息,拿 eToken 凭证;首存 burn 1000 防通胀。"
+      },
+      {
+        "id": "risk-path",
+        "label": "估值与清算",
+        "focus": [
+          "keeper",
+          "vault",
+          "oracle",
+          "chainlink"
+        ],
+        "note": "抗操纵公允价来自 Chainlink;不健康仓由白名单 keeper 清算。"
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "lender",
+      "type": "external",
+      "label": "出借人 Lender",
+      "sublabel": "存 USDG 吃息",
+      "pos": [
+        40,
+        48
+      ],
+      "size": [
+        220,
+        66
+      ]
+    },
+    {
+      "id": "borrower",
+      "type": "external",
+      "label": "借款人 Borrower",
+      "sublabel": "开杠杆 LP 仓",
+      "pos": [
+        380,
+        48
+      ],
+      "size": [
+        220,
+        66
+      ]
+    },
+    {
+      "id": "keeper",
+      "type": "external",
+      "label": "清算 Keeper",
+      "sublabel": "链下 bot (TS)",
+      "pos": [
+        720,
+        48
+      ],
+      "size": [
+        220,
+        66
+      ]
+    },
+    {
+      "id": "governor",
+      "type": "security",
+      "label": "Governor 多签",
+      "sublabel": "治理 / 国库",
+      "pos": [
+        1060,
+        48
+      ],
+      "size": [
+        220,
+        66
+      ],
+      "tag": "上线前移交多签"
+    },
+    {
+      "id": "lendingpool",
+      "type": "backend",
+      "label": "LendingPool",
+      "sublabel": "ExtraFi fork · 存借还+计息",
+      "pos": [
+        40,
+        270
+      ],
+      "size": [
+        220,
+        90
+      ]
+    },
+    {
+      "id": "vault",
+      "type": "backend",
+      "label": "LeverageVault",
+      "sublabel": "V3/V4 · 开·加·领·平·清算",
+      "pos": [
+        380,
+        262
+      ],
+      "size": [
+        220,
+        106
+      ],
+      "tag": "核心编排"
+    },
+    {
+      "id": "oracle",
+      "type": "backend",
+      "label": "LpShareOracleV4",
+      "sublabel": "抗操纵公允价估值",
+      "pos": [
+        720,
+        270
+      ],
+      "size": [
+        220,
+        90
+      ]
+    },
+    {
+      "id": "chainlink",
+      "type": "external",
+      "label": "Chainlink Feeds",
+      "sublabel": "ETH/USD · USDG/USD",
+      "pos": [
+        1060,
+        270
+      ],
+      "size": [
+        220,
+        90
+      ]
+    },
+    {
+      "id": "etoken",
+      "type": "database",
+      "label": "eToken",
+      "sublabel": "出借凭证 · 首存 burn 1000",
+      "pos": [
+        40,
+        500
+      ],
+      "size": [
+        220,
+        82
+      ]
+    },
+    {
+      "id": "swapexec",
+      "type": "backend",
+      "label": "SwapExecutorV3",
+      "sublabel": "zap 换币 · 端点校验",
+      "pos": [
+        380,
+        500
+      ],
+      "size": [
+        220,
+        82
+      ]
+    },
+    {
+      "id": "uniswap",
+      "type": "external",
+      "label": "Uniswap V3 (RH)",
+      "sublabel": "Pool · NFPM · Router02",
+      "pos": [
+        720,
+        500
+      ],
+      "size": [
+        220,
+        82
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Solon 合约(本项目自研)",
+      "wraps": [
+        "vault",
+        "oracle",
+        "swapexec"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "ExtraFi fork(原样复用)",
+      "wraps": [
+        "lendingpool",
+        "etoken"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "RH 链外部依赖",
+      "wraps": [
+        "uniswap",
+        "chainlink"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "lender-deposit",
+      "from": "lender",
+      "to": "lendingpool",
+      "label": "deposit/redeem",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 60
+    },
+    {
+      "id": "borrower-ops",
+      "from": "borrower",
+      "to": "vault",
+      "label": "open/close/harvest",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 60
+    },
+    {
+      "id": "keeper-liq",
+      "from": "keeper",
+      "to": "vault",
+      "label": "liquidate",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 60
+    },
+    {
+      "id": "gov-admin",
+      "from": "governor",
+      "to": "vault",
+      "label": "治理·白名单",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 60
+    },
+    {
+      "id": "vault-borrow",
+      "from": "vault",
+      "to": "lendingpool",
+      "label": "借/还",
+      "fromSide": "left",
+      "toSide": "right"
+    },
+    {
+      "id": "vault-oracle",
+      "from": "vault",
+      "to": "oracle",
+      "label": "估值",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "vault-swap",
+      "from": "vault",
+      "to": "swapexec",
+      "label": "zap 换币",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 40,
+      "labelDx": -78
+    },
+    {
+      "id": "vault-lp",
+      "from": "vault",
+      "to": "uniswap",
+      "label": "铸/撤 LP",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "pool-etoken",
+      "from": "lendingpool",
+      "to": "etoken",
+      "label": "凭证",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 56
+    },
+    {
+      "id": "oracle-feeds",
+      "from": "oracle",
+      "to": "chainlink",
+      "label": "读价",
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "swap-router",
+      "from": "swapexec",
+      "to": "uniswap",
+      "label": "router02",
+      "fromSide": "right",
+      "toSide": "left"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Solon 合约(自研)",
+      "items": [
+        "LeverageVault:开/加/领/平/清算全编排,两层 NFT 凭证",
+        "LpShareOracleV4:公允价取自 Chainlink,spot 操纵无效",
+        "SwapExecutorV3:zap 换币,zapPath 首尾端点校验",
+        "SolonVaultRegistry:实现 IVaultFactory,供 LendingPool 解析白名单/授信"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "ExtraFi fork(原样复用)",
+      "items": [
+        "LendingPool:存/借/还+利率计息,债务指数模型",
+        "eToken:出借凭证,首存 burn 1000 防通胀攻击"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "资金与安全红线",
+      "items": [
+        "债务=金库向 LendingPool 借;抵押=底层 LP NFT 锁在金库",
+        "健康度 = fairValue×LLTV(0.8) ≥ debt;清算 keeper 白名单制",
+        "清算所得封顶应得 bonus,超额回冲借款人债务(F2 修复)",
+        "5 轮红队修 6 洞;上线前移交多签+外部审计"
+      ]
+    }
+  ]
+}

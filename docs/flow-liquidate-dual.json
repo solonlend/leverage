@@ -1,0 +1,49 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "liquidate() dual-borrow 双资产清算流程",
+    "output": "flow-liquidate-dual.html",
+    "quality_profile": "standard",
+    "subtitle": "按比例还两腿 → 合并计价扣押 → 双币 in-kind 分账(F2 封顶保留)"
+  },
+  "lanes": [
+    { "id": "main", "label": "主流程" },
+    { "id": "calc", "label": "守卫 / 计算" },
+    { "id": "exc", "label": "revert 分支", "variant": "exception" }
+  ],
+  "phases": [
+    { "id": "guard", "label": "守卫", "fromCol": 0, "toCol": 1 },
+    { "id": "size", "label": "比例与扣押计算", "fromCol": 2, "toCol": 3, "variant": "emphasis" },
+    { "id": "settle", "label": "结算分账", "fromCol": 4, "toCol": 5, "variant": "dashed" }
+  ],
+  "mainPath": ["entry", "guards", "ratio", "seize", "repayBoth", "payout"],
+  "nodes": [
+    { "id": "entry", "lane": "main", "col": 0, "type": "external", "label": "liquidate(id, k)", "sublabel": "keeper 调用", "width": 160 },
+    { "id": "guards", "lane": "calc", "col": 1, "type": "security", "label": "白名单 & 已不健康?", "sublabel": "LP公允价×LLTV < 两债合并", "width": 200 },
+    { "id": "ratio", "lane": "calc", "col": 2, "type": "backend", "label": "比例 k 封顶", "sublabel": "k≤closeFactor·两腿按比例", "width": 180, "tag": "repayRisk+repayLoan" },
+    { "id": "seize", "lane": "calc", "col": 3, "type": "backend", "label": "合并计价扣押", "sublabel": "repayValue×1.08 ÷ posVal → seizeLiq", "width": 200 },
+    { "id": "repayBoth", "lane": "main", "col": 4, "type": "backend", "label": "垫两币·还两储备", "sublabel": "keeper 付 WETH+USDG·撤 seizeLiq", "width": 200 },
+    { "id": "payout", "lane": "main", "col": 5, "type": "backend", "label": "双币分账", "sublabel": "in-kind付keeper·F2封顶·超额回冲", "width": 200 },
+
+    { "id": "revGuard", "lane": "exc", "col": 1, "type": "external", "label": "revert", "sublabel": "NotLiquidator / Healthy", "width": 190 },
+    { "id": "revZero", "lane": "exc", "col": 3, "type": "external", "label": "revert", "sublabel": "ZERO_REPAY / ZERO_SEIZE", "width": 190 },
+    { "id": "revSlip", "lane": "exc", "col": 5, "type": "external", "label": "revert", "sublabel": "SLIPPAGE(minSeizeOut)", "width": 190 }
+  ],
+  "edges": [
+    { "id": "e1", "from": "entry", "to": "guards", "label": "校验", "variant": "emphasis" },
+    { "id": "e2", "from": "guards", "to": "ratio", "label": "可清算", "variant": "emphasis" },
+    { "id": "e3", "from": "ratio", "to": "seize", "variant": "emphasis" },
+    { "id": "e4", "from": "seize", "to": "repayBoth", "label": "扣押>0", "variant": "emphasis" },
+    { "id": "e5", "from": "repayBoth", "to": "payout", "variant": "emphasis" },
+
+    { "id": "x1", "from": "guards", "to": "revGuard", "label": "否/健康", "variant": "security", "role": "error" },
+    { "id": "x2", "from": "seize", "to": "revZero", "label": "=0", "variant": "security", "role": "error" },
+    { "id": "x3", "from": "payout", "to": "revSlip", "label": "不足", "variant": "security", "role": "error" }
+  ],
+  "cards": [
+    { "dot": "rose", "title": "双资产守卫", "items": ["健康度 = LP公允价×LLTV ≥ WETH债折USDG + USDG债", "k 同时作用两腿(按比例还,最难被套利)", "零债腿 repay=0,keeper 只需带另一币"] },
+    { "dot": "amber", "title": "扣押与分账", "items": ["repayValue = repayRisk×p_eth + repayLoan(USDG 本位)", "seizeValue = repayValue×(1+8%)·封顶全仓", "keeper 拿双币 in-kind,无需链上 swap"] },
+    { "dot": "emerald", "title": "F2 与坏账(保留)", "items": ["keeper 净得封顶应得,超额→多还债→退借款人", "协议费按价值折算从两腿按比例扣", "全平残债按腿 emit BadDebt;feed 断线则 fail-closed 阻塞清算(运维告警)"] }
+  ]
+}
