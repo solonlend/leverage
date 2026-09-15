@@ -1,4 +1,4 @@
-// Source: docs/OPS-RUNBOOK.md §2. ETH hard age is 3h, USDG 26h.
+// Source: docs/OPS-RUNBOOK.md §2. Hard age = deployed LpShareOracleV4 RISK/STABLE_MAX_STALENESS (both 93600s, on-chain read 2026-09-15).
 const alert = (key, level, msg) => ({key, level, msg});
 export function feedAlerts(name, round, decimals, now) {
   const [id, answer, , updatedAt, answered] = round;
@@ -6,8 +6,8 @@ export function feedAlerts(name, round, decimals, now) {
   if (id <= 0n || answer <= 0n || updatedAt <= 0n || answered < id || age < 0n || !Number.isInteger(decimals) || decimals < 0 || decimals > 36)
     return [alert(`${name}:invalid`, 'critical', `${name} invalid feed: STOP_NEW_BORROW`)];
   const result = [];
-  const soft = name === 'ETH' ? 4500n : 90000n;
-  const hard = name === 'ETH' ? 10800n : 93600n;
+  const soft = 90000n;
+  const hard = 93600n;
   if (age > soft) result.push(alert(`${name}:stale`, 'critical', `${name} updatedAt=${updatedAt} age=${age}s: STOP_NEW_BORROW${age>hard?' HARD_AGE_EXCEEDED':''}`));
   if (name === 'USDG') {
     const peg = 10n ** BigInt(decimals);

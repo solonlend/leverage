@@ -47,7 +47,7 @@ cc "$VAULT" 'GOVERNOR()(address)'    # 与签名排班核对
 cc "$LENDING_POOL" 'paused()(bool)'
 cc "$ORACLE" 'RISK_FEED()(address)' # 必须等于 ETH_FEED
 cc "$ORACLE" 'LOAN_FEED()(address)' # 必须等于 USDG_FEED
-cc "$ORACLE" 'RISK_MAX_STALENESS()(uint256)'   # 10800
+cc "$ORACLE" 'RISK_MAX_STALENESS()(uint256)'   # 93600(主网已部署实读 2026-09-15)
 cc "$ORACLE" 'STABLE_MAX_STALENESS()(uint256)' # 93600
 cc "$ORACLE" 'STABLE_DEPEG_BPS()(uint256)'     # 50
 cc "$ETH_FEED" 'latestRoundData()(uint80,int256,uint256,uint256,uint80)'
@@ -65,11 +65,11 @@ cron 使用绝对路径并显式注入上述环境；每分钟启动一次，单
 
 | 检查（每分钟） | 阈值与依据 | 谁立即做什么 |
 |---|---|---|
-| ETH feed 年龄 | **>4500s（75min）**；兜底心跳约 1h，留 15min 抖动，领先 3h 硬闸 105min | 值班告警；owner 执行 §4 暂停，停新增借款；不等 3h |
+| ETH feed 年龄 | **>90000s（25h）**；RH ETH feed 偏差触发+长心跳（平静期实测 gap 达 12.8h），领先 26h 硬闸 1h | 值班告警；owner 执行 §4 暂停，停新增借款；不等 3h |
 | USDG feed 年龄 | **>90000s（25h）**；24h 心跳加 1h 容差，领先 26h 硬闸 1h | 同上；FEED1/LOAN_FEED 是同一条，不算双源 |
 | 独立 USDG/USD 市价 | `abs(price−1)×10000 ≥20 bps`（0.2%） | 值班告警，交叉核价/深度，风控关注；正常噪声为万分之几，20bps 提前发现脱锚 |
 | 独立 USDG/USD 市价 | **≥30 bps（0.3%）** | owner 暂停 LendingPool；30→50bps 为执行提前量，不等 feed 的日级更新 |
-| feed 硬闸 | ETH 年龄 **>10800s**、USDG 年龄 **>93600s**，或 USDG feed **超出 ±50bps** | 合约在估值调用时 fail-closed；值班立即升级事故，owner 保持/补执行暂停，风控启动 §3 |
+| feed 硬闸 | ETH 年龄 **>93600s**、USDG 年龄 **>93600s**，或 USDG feed **超出 ±50bps** | 合约在估值调用时 fail-closed；值班立即升级事故，owner 保持/补执行暂停，风控启动 §3 |
 | keeper 成功扫描年龄 | **≥60s 告警、≥300s 切备逾期** | 主运维查 RPC/进程/nonce/gas；备运维在最后成功扫描后 5min 内接管 |
 | keeper 资金/权限 | 每个 EOA USDG **<400e6**、WETH **<0.2e18** 或授权不足/白名单 false | keeper 运维立即补资/恢复权限；可用 keeper 为零或 5min 切备失败时 owner 暂停 |
 | paused 与事故状态不符 | 已要求暂停却仍 false；或未经恢复批准变 false | 值班每分钟重复升级，owner 查回执/链/地址并重走执行流程，不能以提交成功代替执行成功 |
@@ -110,7 +110,7 @@ def number(v):
     return int(str(v).split()[0])
 try:
     now = int(time.time()) # 运维机需 NTP；硬闸实际使用 block.timestamp
-    for name, soft, hard in [('ETH_FEED', 4500, 10800), ('USDG_FEED', 90000, 93600)]:
+    for name, soft, hard in [('ETH_FEED', 90000, 93600), ('USDG_FEED', 90000, 93600)]:
         r = call(os.environ[name], 'latestRoundData()(uint80,int256,uint256,uint256,uint80)')
         rid, ans, _, updated, answered = map(number, r)
         age = now - updated

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { feedAlerts, heartbeatAlert, nearLiquidation } from '../rules.mjs';
 const now = 200000;
 const round = (age, answer = 100000000n) => [1n, answer, 0n, BigInt(now-age), 1n];
-for (const [name, limit] of [['ETH',4500],['USDG',90000]]) {
+for (const [name, limit] of [['ETH',90000],['USDG',90000]]) {
   for (const delta of [-1,0,1]) test(`${name} age ${limit+delta}`, () => {
     assert.equal(feedAlerts(name, round(limit+delta), 8, now).some(a=>a.key.endsWith('stale')), delta>0);
   });

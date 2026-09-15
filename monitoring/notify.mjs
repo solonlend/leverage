@@ -17,7 +17,8 @@ export function createNotifier({ logFile, token, chatId, fetchImpl = globalThis.
       try { await appendFile(logFile, line, { mode: 0o600 }); }
       catch { delivered = false; await diagnostic('Log write failed'); }
     }
-    if (token && chatId) {
+    // Only critical is pushed to Telegram; warn/info are operational noise (slow RPC, scan backlog) and stay in stdout/log.
+    if (token && chatId && level === 'critical') {
       try {
         const response = await fetchImpl(`https://api.telegram.org/bot${token}/sendMessage`, {
           method: 'POST', headers: { 'content-type': 'application/json' },

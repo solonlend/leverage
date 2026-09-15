@@ -25,8 +25,21 @@ test('Telegram adapter sends message with timeout signal', async () => {
   } });
   assert.equal(await notify('critical', 'bad debt'), true);
   assert.equal(sent.url, 'https://api.telegram.org/botmock-secret/sendMessage');
-  assert.deepEqual(JSON.parse(sent.options.body), { chat_id: '42', text: '[critical] bad debt' });
+  assert.deepEqual(JSON.parse(sent.options.body), { chat_id: '42', text: 'SOLON MONITOR [critical] bad debt' });
   assert.ok(sent.options.signal instanceof AbortSignal);
+});
+
+test('warn and info stay in stdout/log only; only critical is pushed to Telegram', async () => {
+  const sent = []; const lines = [];
+  const notify = notifier.createNotifier({ token: 'mock-secret', chatId: '42', stdout: line => lines.push(line), fetchImpl: async (url, options) => {
+    sent.push(JSON.parse(options.body).text); return { ok: true, json: async () => ({ ok: true }) };
+  } });
+  assert.equal(await notify('warn', 'events check still running'), true);
+  assert.equal(await notify('info', 'started'), true);
+  assert.equal(sent.length, 0);
+  assert.equal(lines.length, 2);
+  assert.equal(await notify('critical', 'bad debt'), true);
+  assert.deepEqual(sent, ['SOLON MONITOR [critical] bad debt']);
 });
 
 test('local failure still attempts Telegram; errors never expose secrets', async () => {
@@ -34,7 +47,7 @@ test('local failure still attempts Telegram; errors never expose secrets', async
   const notify = notifier.createNotifier({ logFile: '/does-not-exist/monitor.log', token: 'mock-secret', chatId: '42', stdout: line => lines.push(line), fetchImpl: async () => {
     attempted = true; throw new Error('mock-secret https://rpc.invalid/?key=private');
   } });
-  assert.equal(await notify('warn', 'stale feed'), false);
+  assert.equal(await notify('critical', 'stale feed'), false);
   assert.equal(attempted, true);
   assert.ok(lines.some(line => line.includes('Telegram delivery failed')));
   assert.ok(lines.some(line => line.includes('Log write failed')));
@@ -58,7 +71,7 @@ test('Telegram HTTP and API rejection returns false using only fixed diagnostics
   for (const response of [{ ok: false }, { ok: true, json: async () => ({ ok: false, description: 'sensitive detail' }) }]) {
     const lines = [];
     const notify = notifier.createNotifier({ token: 'secret', chatId: '42', stdout: line => lines.push(line), fetchImpl: async () => response });
-    assert.equal(await notify('info', 'test'), false);
+    assert.equal(await notify('critical', 'test'), false);
     assert.equal(JSON.parse(lines[1]).msg, 'Telegram delivery failed');
     assert.ok(!lines.join('').includes('sensitive detail'));
   }
@@ -69,6 +82,6 @@ test('stdout failure does not prevent Telegram delivery', async () => {
   const notify = notifier.createNotifier({ token: 'secret', chatId: '42', stdout: () => { throw new Error('private'); }, fetchImpl: async () => {
     attempted = true; return { ok: true, json: async () => ({ ok: true }) };
   } });
-  assert.equal(await notify('info', 'test'), false);
+  assert.equal(await notify('critical', 'test'), false);
   assert.equal(attempted, true);
 });

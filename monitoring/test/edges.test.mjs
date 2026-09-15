@@ -2,9 +2,16 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {feedAlerts} from '../rules.mjs';
 import {createMonitor} from '../monitor.mjs';
-for(const [name,hard] of [['ETH',10800],['USDG',93600]])for(const delta of [-1,0,1])test(`${name} hard age ${hard+delta}`,()=>{
+// ETH 硬闸对齐已部署 LpShareOracleV4.RISK_MAX_STALENESS()=93600(2026-09-15 链上实读)
+for(const [name,hard] of [['ETH',93600],['USDG',93600]])for(const delta of [-1,0,1])test(`${name} hard age ${hard+delta}`,()=>{
  const a=feedAlerts(name,[1n,100000000n,0n,BigInt(200000-hard-delta),1n],8,200000);
  assert.equal(a.some(x=>x.msg.includes('HARD_AGE_EXCEEDED')),delta>0);
+});
+test('ETH calm-period gap 46226s (observed 2026-09-13) raises no stale alert',()=>{
+ assert.equal(feedAlerts('ETH',[1n,250000000000n,0n,BigInt(200000-46226),1n],8,200000).length,0);
+});
+for(const [name,soft] of [['ETH',90000],['USDG',90000]])for(const delta of [0,1])test(`${name} soft age ${soft+delta}`,()=>{
+ assert.equal(feedAlerts(name,[1n,100000000n,0n,BigInt(200000-soft-delta),1n],8,200000).some(x=>x.key===`${name}:stale`),delta>0);
 });
 for(const sign of [-1n,1n])for(const delta of [-1n,0n,1n])test(`peg hard band ${sign*(500000n+delta)}`,()=>{
  const a=feedAlerts('USDG',[1n,100000000n+sign*(500000n+delta),0n,1000n,1n],8,1000);

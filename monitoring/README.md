@@ -8,7 +8,7 @@ Node.js ≥22，直接通过 `createRequire` 复用 `../keeper/node_modules/viem
 
 | 项目 | 实现与边界 |
 |---|---|
-| Feed 时效 | `latestRoundData` 的 `updatedAt`；ETH **>4500s**、USDG **>90000s** 为 critical，提示停新增借款；恰好阈值允许。无效 round、非正价格、零/未来时戳、读取失败均 critical。ETH 硬闸实际 **3h**，USDG **26h**，不是两者都 26h。 |
+| Feed 时效 | `latestRoundData` 的 `updatedAt`；ETH、USDG 均 **>90000s（25h）** 为 critical，提示停新增借款；恰好阈值允许。无效 round、非正价格、零/未来时戳、读取失败均 critical。硬闸两者都是 **93600s（26h）**，即已部署 LpShareOracleV4 的 `RISK_MAX_STALENESS`/`STABLE_MAX_STALENESS`（2026-09-15 链上实读；RH ETH feed 平静期实测 gap 达 12.8h，旧 3h 口径会持续误报）。 |
 | USDG feed 脱锚 | 用 `decimals` 和 BigInt 交叉乘法比较，双向 **≥20bps warn、≥30bps critical**；critical 提示 `STOP_NEW_BORROW`；严格超出 ±50bps 标注硬闸，恰好 ±50bps 不标注。 |
 | Keeper | 读取 JSON `{ "updatedAt": 整数Unix秒 }`；最后成功扫描 **≥60s warn、≥300s critical**，遵循手册比任务默认值更早的响应要求。缺失/非法文件 critical。 |
 | BadDebt | 按真实 ABI `BadDebt(uint256 indexed id,uint256 indexed debtId,uint256 residualDebt)` 分块 `getLogs`，逐事件 critical，含区块/交易/仓位/债务腿/残债原始单位。 |
@@ -62,7 +62,7 @@ node keeper/index.mjs </dev/null | node monitoring/heartbeat.mjs
 
 ## 告警与 Telegram 适配器
 
-`createNotifier(...)` 返回 `async notify(level, msg)`，level 为 info/warn/critical。默认 stdout + JSONL，配置环境变量后追加 Telegram Bot API `sendMessage`（出站 HTTPS webhook 风格适配器，不要求公网入站 webhook）。bot 需在目标聊天中有发消息权限。不要粘贴真实 token 到 README、测试或日志。
+`createNotifier(...)` 返回 `async notify(level, msg)`，level 为 info/warn/critical。默认 stdout + JSONL，配置环境变量后对 **critical** 追加 Telegram Bot API `sendMessage`（warn/info 只进 stdout+JSONL，不推群，2026-09-15 起）（出站 HTTPS webhook 风格适配器，不要求公网入站 webhook）。bot 需在目标聊天中有发消息权限。不要粘贴真实 token 到 README、测试或日志。
 
 每次 Telegram 请求 10 秒超时；日志与 Telegram 分别尝试，失败只记录固定脱敏提示，不打印异常对象、RPC URL、响应正文。任一启用渠道失败返回 false，不进入冷却，下轮重试。通知函数可注入其它渠道。冷却在内存，重启时活动告警会重新发送；恢复清除状态，下一次复发立即发。不同 BadDebt 事件不合并，可能在坏账集中发生时产生多条严重通知。
 
