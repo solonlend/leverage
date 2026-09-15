@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createMonitor,retryRead} from '../monitor.mjs';
 function fixture(overrides={},options={}) {
   const alerts=[]; let saved;
-  const config={startBlock:1n,blockBatch:10n,confirmations:0n,retries:1,retryDelayMs:0,healthEnabled:true,maxPositions:10,nearCount:2,scope:'test'};
+  const config={startBlock:1n,blockBatch:10n,confirmations:0n,retries:1,retryDelayMs:0,healthEnabled:true,heartbeatEnabled:true,maxPositions:10,nearCount:2,scope:'test'};
   const chain={feed:async()=>({round:[1n,100000000n,0n,1000n,1n],decimals:8}),head:async()=>2n,blockHash:async n=>`hash${n}`,badDebt:async()=>[],nextPositionId:async()=>3n,position:async()=>({value:100n,debt:91n}),lltv:async()=>10n**18n,...overrides};
   const monitor=createMonitor({chain,config,alert:async(key,level,msg)=>{alerts.push({key,level,msg});return true;},clear:()=>{},readHeartbeat:async()=>({updatedAt:1000}),loadState:async()=>saved,saveState:async s=>{saved=s;},now:()=>1000,...options});
   return {monitor,alerts,get saved(){return saved;},config};
