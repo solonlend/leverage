@@ -1,14 +1,15 @@
 // Solon Range Vaults (CLM) keeper: moveTicks 巡逻 + 运维告警,单文件自足(viem)。
-// 触发条件(满足其一且 isCalm):①距上次调仓 > MOVE_INTERVAL_S(默认 6h)②现价 tick 出了主仓区间。
+// 触发条件:现价 tick 出了主仓区间且 isCalm。区间内不调仓(只烧 gas,见 range-core.mjs)。
 // 告警(stdout+可选 TG):出区间持续且不平静无法调仓、moveTicks 失败、RPC 连续失败。
 // 心跳:每次成功扫描写 HEARTBEAT_FILE(供 monitoring daemon 的 keeper-liveness 检查)。
 //
 // env: RPC_URL, STRATEGY_ADDRESS, POOL_ADDRESS, DRY_RUN(默认 true), KEEPER_PRIVATE_KEY(实弹必填),
-//      CHAIN_ID(默认 4663), MOVE_INTERVAL_S(21600), OOR_ALERT_S(1800), POLL_MS(120000),
+//      CHAIN_ID(默认 4663), OOR_ALERT_S(1800), POLL_MS(120000),
 //      HEARTBEAT_FILE, TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID(可选)
 import { createPublicClient, createWalletClient, http, defineChain } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { writeFile, appendFile } from 'node:fs/promises';
+import { decideMove, withGasBuffer } from './range-core.mjs';
 
 const env = process.env;
 const dryRun = env.DRY_RUN !== 'false';
@@ -16,7 +17,6 @@ const rpcUrl = env.RPC_URL;
 const strategyAddr = env.STRATEGY_ADDRESS;
 const poolAddr = env.POOL_ADDRESS;
 const chainId = Number(env.CHAIN_ID ?? '4663');
-const moveIntervalS = Number(env.MOVE_INTERVAL_S ?? '21600');
 const oorAlertS = Number(env.OOR_ALERT_S ?? '1800');
 const pollMs = Number(env.POLL_MS ?? '120000');
 const heartbeatFile = env.HEARTBEAT_FILE;
@@ -74,8 +74,7 @@ async function scan() {
   const [lower, upper] = main;
   const tick = slot0[1];
   const now = Math.floor(Date.now() / 1000);
-  const inRange = tick >= lower && tick <= upper;
-  const stale = now - Number(lastAdj) > moveIntervalS;
+  const { inRange, needMove } = decideMove({ tick, lower, upper });
 
   if (inRange) oorSince = 0;
   else if (oorSince === 0) oorSince = now;
@@ -84,7 +83,6 @@ async function scan() {
 
   if (isPaused) { await log('info', `paused; skip (tick=${tick} range=[${lower},${upper}])`); return; }
 
-  const needMove = stale || !inRange;
   if (!needMove) { await log('info', `ok tick=${tick} range=[${lower},${upper}] ageS=${now - Number(lastAdj)}`); return; }
 
   if (!calm) {
@@ -98,10 +96,12 @@ async function scan() {
     return;
   }
 
-  if (dryRun) { await log('info', `WOULD moveTicks (stale=${stale} inRange=${inRange} tick=${tick} range=[${lower},${upper}])`); return; }
+  if (dryRun) { await log('info', `WOULD moveTicks (inRange=${inRange} tick=${tick} range=[${lower},${upper}])`); return; }
 
   try {
-    const hash = await wallet.writeContract({ address: strategyAddr, abi: stratAbi, functionName: 'moveTicks' });
+    const call = { account: wallet.account, address: strategyAddr, abi: stratAbi, functionName: 'moveTicks' };
+    const gas = withGasBuffer(await pub.estimateContractGas(call));
+    const hash = await wallet.writeContract({ ...call, gas });
     const rcpt = await pub.waitForTransactionReceipt({ hash, timeout: 120_000 });
     if (rcpt.status === 'success') { oorSince = 0; await log('info', `moveTicks ok ${hash}`); }
     else await log('alert', `moveTicks reverted ${hash}`);
@@ -110,7 +110,7 @@ async function scan() {
   }
 }
 
-await log('info', `range keeper up: strategy=${strategyAddr} chain=${chainId} dryRun=${dryRun} moveIntervalS=${moveIntervalS}`);
+await log('info', `range keeper up: strategy=${strategyAddr} chain=${chainId} dryRun=${dryRun} trigger=out-of-range-only`);
 for (;;) {
   try { await scan(); }
   catch (e) {
