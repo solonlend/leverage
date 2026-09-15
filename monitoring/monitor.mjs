@@ -26,7 +26,7 @@ export function createMonitor({chain,config,alert,clear,readHeartbeat,loadState,
     for(const suffix of ['invalid','stale','peg']) if(!alerts.some(a=>a.key===`${name}:${suffix}`)) clear(`${name}:${suffix}`);
     for(const a of alerts) await send(a);
   }
-  async function events() {
+  async function eventBatch() {
     const state=await loadState();
     checkStopped();
     if(state && (state.scope!==config.scope || !/^\d+$/.test(state.nextBlock) || BigInt(state.nextBlock)<config.startBlock)) throw Error('invalid cursor');
@@ -50,9 +50,17 @@ export function createMonitor({chain,config,alert,clear,readHeartbeat,loadState,
     await saveState({scope:config.scope,nextBlock:String(to+1n),hash});
     // Events are deduplicated by durable cursor; don't retain unbounded keys.
     for(const log of logs) clear(`BadDebt:${log.transactionHash}:${log.logIndex}`);
-    if(to<end) await alert('events:backlog','warn',`BadDebt scan catching up: next=${to+1n} target=${end}`);
+    return {head:String(head),fromBlock:String(from),toBlock:String(to),target:String(end),logs:logs.length,upToDate:to===end};
+  }
+  // Small getLogs spans (e.g. dRPC free plan: 100 blocks) can't keep up with RH (~600 blocks/min) at one batch per poll,
+  // so drain up to maxEventBatches batches per poll and only warn if still behind afterwards.
+  async function events() {
+    const maxBatches=config.maxEventBatches??1;
+    let r;
+    for(let i=0;i<maxBatches;i++) {r=await eventBatch();if(r.upToDate)break;}
+    if(!r.upToDate) await alert('events:backlog','warn',`BadDebt scan catching up: next=${BigInt(r.toBlock)+1n} target=${r.target}`);
     else clear('events:backlog');
-    return {head:String(head),fromBlock:String(from),toBlock:String(to),logs:logs.length,upToDate:to===end};
+    return r;
   }
   async function health() {
     const next=await read(()=>chain.nextPositionId());

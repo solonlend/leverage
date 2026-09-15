@@ -16,7 +16,7 @@ export function readConfig(env=process.env) {
     usdgFeed:address('USDG_FEED','0x61B7e5650328764B076A108EFF5fa7282a1B9aD2'),
     pollMs:number('POLL_MS',60000,100,60000),rpcTimeoutMs:number('RPC_TIMEOUT_MS',5000,100,30000),
     retries:number('RPC_RETRIES',2,0,5),retryDelayMs:number('RPC_RETRY_DELAY_MS',250,0,5000),
-    blockBatch:BigInt(number('BLOCK_BATCH',1000,1,10000)),confirmations:BigInt(number('CONFIRMATIONS',0,0,1000)),
+    blockBatch:BigInt(number('BLOCK_BATCH',1000,1,10000)),maxEventBatches:number('MAX_EVENT_BATCHES',1,1,1000),confirmations:BigInt(number('CONFIRMATIONS',0,0,1000)),
     cooldownMs:number('COOLDOWN_MS',300000,1,86400000),healthEnabled:env.HEALTH_ENABLED==='true',
     // Keeper heartbeat check: on by default; set HEARTBEAT_ENABLED=false until the keeper writes a heartbeat file (else it false-alarms every cycle).
     heartbeatEnabled:env.HEARTBEAT_ENABLED!=='false',

@@ -55,3 +55,20 @@ test('a failed later log chunk leaves the entire event cursor unchanged',async()
  await f.monitor.tick();assert.equal(f.saved,undefined);assert.ok(f.alerts.some(a=>a.key==='check:events'));
  assert.deepEqual(calls,[[1n,1n],[2n,2n]]);
 });
+
+test('one poll drains multiple event batches up to maxEventBatches and clears backlog',async()=>{
+ const ranges=[];const f=fixture({head:async()=>35n,badDebt:async(a,b)=>{ranges.push([a,b]);return [];}});
+ f.config.maxEventBatches=5;
+ await f.monitor.tick();
+ assert.deepEqual(ranges,[[1n,10n],[11n,20n],[21n,30n],[31n,35n]]);
+ assert.equal(f.saved.nextBlock,'36');
+ assert.ok(!f.alerts.some(a=>a.key==='events:backlog'));
+});
+
+test('batch cap reached with blocks left warns backlog once',async()=>{
+ const f=fixture({head:async()=>35n});
+ f.config.maxEventBatches=2;
+ await f.monitor.tick();
+ assert.equal(f.saved.nextBlock,'21');
+ assert.equal(f.alerts.filter(a=>a.key==='events:backlog').length,1);
+});
